@@ -1,0 +1,4 @@
+.vscode/*
+tickets.ini
+*.log
+*.so

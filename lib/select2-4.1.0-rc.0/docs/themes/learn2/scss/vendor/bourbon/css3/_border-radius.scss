@@ -1,0 +1,52 @@
+//************************************************************************//
+// Shorthand Border-radius mixins
+//************************************************************************//
+@mixin border-top-radius($radii) {
+  @include prefixer(border-top-left-radius, $radii, spec);
+  @include prefixer(border-top-right-radius, $radii, spec);
+}
+
+@mixin border-bottom-radius($radii) {
+  @include prefixer(border-bottom-left-radius, $radii, spec);
+  @include prefixer(border-bottom-right-radius, $radii, spec);
+}
+
+@mixin border-left-radius($radii) {
+  @include prefixer(border-tots: _linear-gradient-parser("#{$border}");
+        $webkit-border: map-get($gradients, webkit-image);
+        $spec-border:   map-get($gradients, spec-image);
+      }
+
+      @else if $gradient-type == "radial" {
+        $gradients: _radial-gradient-parser("#{$border}");
+        $webkit-border: map-get($gradients, webkit-image);
+        $spec-border:   map-get($gradients, spec-image);
+      }
+
+      @else {
+        $webkit-border: $border;
+          $spec-border: $border;
+      }
+    }
+
+    @else {
+      $webkit-border: $border;
+        $spec-border: $border;
+    }
+
+    $webkit-borders: append($webkit-borders, $webkit-border, comma);
+    $spec-borders:   append($spec-borders,   $spec-border,   comma);
+  }
+
+  -webkit-border-image: $webkit-borders;
+          border-image: $spec-borders;
+          border-style: solid;
+}
+
+//Examples:
+// @include border-image(url("image.png"));
+// @include border-image(url("image.png") 20 stretch);
+// @include border-image(linear-gradient(45deg, orange, yellow));
+// @include border-image(linear-gradient(45deg, orange, yellow) stretch);
+// @include border-image(linear-gradient(45deg, orange, yellow) 20 30 40 50 stretch round);
+// @include border-image(radial-gradient(top, cover, orange, yellow, orange));

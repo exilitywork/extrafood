@@ -1,0 +1,40 @@
+.tickettable {
+	width: 100%;
+	margin-bottom: 20px;
+	border: 5px solid #fff;
+	border-top: 5px solid #fff;
+	border-bottom: 3px solid #fff;
+	border-collapse: collapse; 
+	outline: 3px solid #ffd300;
+	font-size: 15px;
+	background: #fff!important;
+}
+.tickettable th {
+	font-weight: bold;
+	padding: 7px;
+	background: #ffd300;
+	border: none;
+	text-align: left;
+	font-size: 15px;
+	border-top: 3px solid #fff;
+	border-bottom: 3px solid #ffd300;
+}
+.tickettable td {
+	padding: 7px;
+	border: none;
+	border-top: 3px solid #fff;
+	border-bottom: 3px solid #fff;
+	font-size: 15px;
+}
+.tickettable tbody tr:nth-child(even){
+	background: #f8f8f8!important;
+}
+
+.loadingindicator {
+    background: #fff url(../pics/spinner.48.gif) no-repeat center 0.5em;
+    padding: 60px 0.5em 0.5em;
+    text-align: center;
+    max-width: 350px;
+    margin: auto;
+    border: none;
+}

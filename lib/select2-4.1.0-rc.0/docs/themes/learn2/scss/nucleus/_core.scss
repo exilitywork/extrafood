@@ -1,0 +1,226 @@
+*, *::before, *::after {
+	@include box-sizing(border-box);
+}
+
+@-webkit-viewport{width:device-width}
+@-moz-viewport{width:device-width}
+@-ms-viewport{width:device-width}
+@-o-viewport{width:device-width}
+@viewport{width:device-width}
+
+html {
+	font-size: 100%;
+	-ms-text-size-adjust: 100%;
+	-webkit-text-size-adjust: 100%;
+}
+
+body {
+	margin: 0;
+}
+
+article,
+aside,
+details,
+figcaption,
+figure,
+footer,
+header,
+hgroup,
+main,
+nav,
+section,
+summary {
+	display: block;
+}
+
+audio,
+canvas,
+progress,
+video {
+	display: inline-block;
+	vertical-align: baseline;
+}
+
+audio:not([controls]) {
+	display: none;
+	height: 0;
+}
+
+[hidden],
+template {
+	display: none;
+}
+
+a {
+	background: transparent;
+	text-decoration: none;
+}
+
+a:active,
+a:hover {
+	outline: 0;
+}
+
+abbr[title] {
+	border-bottom: 1px dotted;
+}
+
+b,
+strong {
+	font-weight: bold;
+}
+
+dfn {
+	font-style: italic;
+}
+
+mark {
+	background: #FFFF27;
+	color: #333;
+}
+
+sub,
+sup {
+	font-size: $core-font-size - 0.250;
+	line-height: 0;
+	position: relative;
+	vertical-align: baseline;
+}
+
+sup {
+	top: -0.5em;
+}
+
+sub {
+	bottom: -0.25em;
+}
+
+img {
+	border: 0;
+	max-width: 100%;
+}
+
+svg:not(:root) {
+	overflow: hidden;
+}
+
+figure {
+	margin: 1em 40px;
+}
+
+hr {
+	height: 0;
+}
+
+pre {
+	overflow: auto;
+}
+
+code,
+kbd,
+pre,
+samp {
+	// font-size: $core-font-size;
+}
+
+button,
+input,
+optgroup,
+select,
+textarea {
+	color: inherit;
+	font: inherit;
+	margin: 0;
+}
+
+button {
+	overflow: visible;
+}
+
+button,
+select {
+	text-transform: none;
+}
+
+button,
+html input[type="button"],
+input[type="reset"],
+input[type="submit"] {
+	-webkit-appearance: button;
+	cursor: pointer;
+}
+
+button[disabled],
+html input[disabled] {
+	cursor: default;
+}
+
+button::-moz-focus-inner,
+input::-moz-focus-inner {
+	border: 0;
+	padding: 0;
+}
+
+input {
+	line-height: normal;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+	padding: 0;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+	height: auto;
+}
+
+input[type="search"] {
+	-webkit-appearance: textfield;
+}
+
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+	-webkit-appearance: none;
+}
+
+legend {
+	border: 0;
+	padding: 0;
+}
+
+textarea {
+	overflow: auto;
+}
+
+optgroup {
+	font-weight: bold;
+}
+
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+	table-layout: fixed;
+	width: 100%;
+}
+
+tr, td, th {
+	vertical-align: middle;
+}
+
+th, td {
+	padding: ($leading-margin / 4) 0;
+}
+
+th {
+	text-align: left;
+}
+*width:79.1357%}.pure-u-4-5{width:80%;*width:79.969%}.pure-u-5-6,.pure-u-20-24{width:83.3333%;*width:83.3023%}.pure-u-7-8,.pure-u-21-24{width:87.5%;*width:87.469%}.pure-u-11-12,.pure-u-22-24{width:91.6667%;*width:91.6357%}.pure-u-23-24{width:95.8333%;*width:95.8023%}.pure-u-1,.pure-u-1-1,.pure-u-5-5,.pure-u-24-24{width:100%}
+
+/* Custom */
+[class *="pure-u"] {display:inline-block;*display:inline;zoom:1;letter-spacing:normal;word-spacing:normal;vertical-align:top;text-rendering:auto;}
+.pure-u-1-7 {width: 14.285%;}.pure-u-2-7 {width: 28.571%;}.pure-u-3-7 {width: 42.857%;}.pure-u-4-7 {width: 57.142%;}.pure-u-5-7 {width: 71.428%;}.pure-u-6-7 {width: 85.714%;}
+.pure-u-1-9 {width: 11.111%;}.pure-u-2-9 {width: 22.222%;}.pure-u-3-9 {width: 33.333%;}.pure-u-4-9 {width: 44.444%;}.pure-u-5-9 {width: 55.555%;}.pure-u-6-9 {width: 66.666%;}.pure-u-7-9 {width: 77.777%;}.pure-u-8-9 {width: 88.888%;}
+.pure-u-1-10 {width: 10%;}.pure-u-2-10 {width: 20%;}.pure-u-3-10 {width: 30%;}.pure-u-4-10 {width: 40%;}.pure-u-5-10 {width: 50%;}.pure-u-6-10 {width: 60%;}.pure-u-7-10 {width: 70%;}.pure-u-8-10 {width: 80%;}.pure-u-9-10 {width: 90%;}
+
+.pure-u-1-11 {width: 9.090%;}.pure-u-2-11 {width: 18.181%;}.pure-u-3-11 {width: 27.272%;}.pure-u-4-11 {width: 36.363%;}.pure-u-5-11 {width: 45.454%;}.pure-u-6-11 {width: 54.545%;}.pure-u-7-11 {width: 63.636%;}.pure-u-8-11 {width: 72.727%;}.pure-u-9-11 {width: 81.818%;}.pure-u-10-11 {width: 90.909%;}
