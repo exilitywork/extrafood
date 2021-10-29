@@ -121,7 +121,7 @@ if (!($connect->checkConnection())) {
 
             // ВЫВОД ВЫБРАННОГО ПОДРАЗДЕЛЕНИЯ И ЕГО РУКОВОДИТЕЛЯ
             echo '
-                <form id="assigned" action="./test-talonov" method="get" accept-charset="utf-8">
+                <form id="assigned" action="" method="get" accept-charset="utf-8">
                 <table class="tickettable">
                     <tr>
                         <th colspan="2">Пользователь:</th>
