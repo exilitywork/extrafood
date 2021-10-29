@@ -162,6 +162,7 @@ class DBFunctions {
     static function loadTickets($ldap_conn, $gedemin_conn, $manager_sap_id, $date, $loginuser) {
         $res = [];
         $out = "
+            <tbody>
             <tr>
                 <th>ФИО</th>
                 <th>Табельный</th>
@@ -182,6 +183,8 @@ class DBFunctions {
                     $res[$info[$i]['manager'][0]][$index]['tabnum'] = $info[$i]['employeeid'][0];
                 }
             }
+            
+            $disabled = date_format(date_create($date), 'm') == date('m') ? '' : 'disabled';
 
             foreach ($res as $manager => $employees) {
                 $sorted = self::array_orderby($employees, 'name', SORT_ASC, 'tabnum', SORT_ASC);
@@ -194,7 +197,7 @@ class DBFunctions {
                                 <td>".$emp['tabnum']."</td>";
                         if (self::getGedeminUserId($gedemin_conn, $emp['tabnum'])) {
                             $out .= "
-                                <td><input type='checkbox' onchange='updateTicket(this)' $checked></td>
+                                <td><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>
                                 <td><span style='color: green'>АКТИВНА</td>
                             </tr>";
                         } else {
@@ -209,6 +212,7 @@ class DBFunctions {
             Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$loginuser." - Ошибка в функции DBFunction::loadTickets(): ".$e->getMessage());
             print_r('Поймано исключение: '.$e->getMessage());
         }
+        $out .= "</tbody>";
         return $out;
     }
 
@@ -545,7 +549,7 @@ class DBFunctions {
         $cur_user = [];
         try {
             $filter = "(&(memberOf:1.2.840.113556.1.4.1941:=CN=Спецпитание,OU=СООО Белвест,DC=belwest,DC=corp)(employeeType>=0)(objectCategory=person)(objectClass=user)(sAMAccountName=".$samaccountname."))";
-            $attrs = array('cn', 'department', 'departmentnumber', 'employeeid', 'employeenumber', 'employeetype', 'localeid', 'name', 'title');
+            $attrs = array('cn', 'department', 'departmentnumber', 'employeeid', 'employeenumber', 'employeetype', 'localeid', 'name', 'title', 'sn', 'givenname', 'initials');
             $search = ldap_search($ldap_conn, DBFunctions::$searchbase, $filter, $attrs);
             $users = ldap_get_entries($ldap_conn, $search);
             if ($users['count'] > 0) {
@@ -558,6 +562,7 @@ class DBFunctions {
                 $cur_user['localeid']           = $users[0]['localeid'][0];
                 $cur_user['name']               = $users[0]['name'][0];
                 $cur_user['title']              = $users[0]['title'][0];
+                $cur_user['fio']                = $users[0]['sn'][0].' '.substr($users[0]['givenname'][0], 0, 2).'.'.$users[0]['initials'][0].'.';
                 return $cur_user;
             }
         } catch (Exception $e) {

@@ -38,19 +38,18 @@ drupal_add_js('sites/all/modules/bw-tickets/lib/select2-4.1.0-rc.0/dist/js/selec
 
 Logger::init();
 
-print_r($_SERVER);
 $cfg = parse_ini_file(__DIR__ . '/../tickets.ini');
 
 // Имя текущего пользователя
 global $user;
 $userlogin = mb_strtolower($user->name);
 
-$test_user = "SinitskiDV";
+//$test_user = "SinitskiDV";
 //$test_user = "MatoroNN";
-//$test_user = 'KrivkoEV';
-$test_user = 'CherviakovUV';
+//$test_user = 'LevkinaVN';
+//$test_user = 'CherviakovUV';
 
-$userlogin = $test_user;
+//$userlogin = $test_user;
 $encrypted_name = openssl_encrypt($userlogin, $cfg['method'], $cfg['key'].date('Ymd'), 0 , date('YmdYmd'));
 
 // ПОДКЛЮЧЕНИЕ К LDAP И GEDEMIN
@@ -138,7 +137,7 @@ if (!($connect->checkConnection())) {
                     </tr>';
             if (count($dep_list) == 1) { 
                 echo '<tr>
-                        <td colspan="2">'.$sel_mgr['cn'].' - '.$sel_mgr['department'].'</td>
+                        <td colspan="2">'.$sel_mgr['department'].' ('.$sel_mgr['fio'].')</td>
                         <input type="hidden" name="selected_mgr" value="'.$sel_mgr_sap_id.'">
                     </tr>
                 ';
@@ -151,7 +150,7 @@ if (!($connect->checkConnection())) {
                 foreach ($dep_list as $key => $mgr_id) {
                     $selected = $sel_mgr_sap_id == $mgr_id ? 'selected' : '';
                     $user_info = DBFunctions::getUserBySapId($connect->getLdapConn(), $mgr_id);
-                    echo '<option '.$selected.' value="'.$mgr_id.'">'.$user_info['fio'].' - '.$user_info['department'].'</option>';
+                    echo '<option '.$selected.' value="'.$mgr_id.'">'.$user_info['department'].' ('.$user_info['fio'].')</option>';
                 }
                 echo '      </select>
                         </td>
@@ -194,7 +193,7 @@ if (!($connect->checkConnection())) {
                 }
             }
 
-            // ФОРМИРОВАНИЕ СПИСКА ВДЛЯ ДОБАВЛЕНИЯ ОТВЕТСТВЕННОГО
+            // ФОРМИРОВАНИЕ СПИСКА ДЛЯ ДОБАВЛЕНИЯ ОТВЕТСТВЕННОГО
             echo '
                     <tr>
                         <td>
@@ -281,7 +280,6 @@ if (!($connect->checkConnection())) {
                                 },
                                 dataType: "json",
                                 success: function(data) {
-                                    //console.log(date);
                                     if (data.reply == "TRUE") {
                                         let td = jQuery(\'#\' + tabnum).children(\'td\');
                                         let cell = jQuery(td[(new Date(date)).getDate()]);
@@ -349,7 +347,6 @@ if (!($connect->checkConnection())) {
                                     loadmonth : loadmonth,
                                     user : "'.$encrypted_name.'"
                                 },
-                                //dataType: "json",
                                 success: function(data) {
                                     let jdata = JSON.parse(data);
                                     jQuery(\'#tickettable\').html(jdata.day);
