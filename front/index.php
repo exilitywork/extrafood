@@ -43,7 +43,6 @@ $cfg = parse_ini_file(__DIR__ . '/../tickets.ini');
 // Имя текущего пользователя
 global $user;
 $userlogin = mb_strtolower($user->name);
-$userlogin = "strokovdl";
 
 $encrypted_name = openssl_encrypt($userlogin, $cfg['method'], $cfg['key'].date('Ymd'), 0 , date('YmdYmd'));
 
@@ -132,7 +131,7 @@ if (!($connect->checkConnection())) {
                     </tr>
                     <tr>
                         <th colspan="2">Выбранное подразделение:</th>
-                    </tr>';print_r(count($dep_list));
+                    </tr>';
             if (count($dep_list) == 1) { 
                 echo '<tr>
                         <td colspan="2">'.$sel_mgr['department'].' ('.$sel_mgr['fio'].')</td>
