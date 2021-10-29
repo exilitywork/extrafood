@@ -43,6 +43,7 @@ $cfg = parse_ini_file(__DIR__ . '/../tickets.ini');
 // Имя текущего пользователя
 global $user;
 $userlogin = mb_strtolower($user->name);
+$userlogin = "strokovdl";
 
 $encrypted_name = openssl_encrypt($userlogin, $cfg['method'], $cfg['key'].date('Ymd'), 0 , date('YmdYmd'));
 
@@ -69,7 +70,7 @@ if (!($connect->checkConnection())) {
         }
 
         // ПРОВЕРКА НА НАЛИЧИЕ ПОДЧИНЕННЫХ ГРУПП ДЛЯ УПРАВЛЕНИЯ И ИХ ЗАГРУЗКА
-        $dep_list = [];
+        $dep_list = DBFunctions::isManager($connect->getLdapConn(), $current_user['dn']) ? [$current_user['employeenumber']] : [];
         $dep_list = DBFunctions::getAssignedGroups($connect->getGedeminConn(), $current_user['employeenumber'], $dep_list);
         if (isset($_GET['action']) && $_GET['action'] == 'select') {
             $sel_mgr_sap_id = $_GET['selected_mgr'];
@@ -131,7 +132,7 @@ if (!($connect->checkConnection())) {
                     </tr>
                     <tr>
                         <th colspan="2">Выбранное подразделение:</th>
-                    </tr>';
+                    </tr>';print_r(count($dep_list));
             if (count($dep_list) == 1) { 
                 echo '<tr>
                         <td colspan="2">'.$sel_mgr['department'].' ('.$sel_mgr['fio'].')</td>
