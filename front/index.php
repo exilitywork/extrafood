@@ -44,12 +44,6 @@ $cfg = parse_ini_file(__DIR__ . '/../tickets.ini');
 global $user;
 $userlogin = mb_strtolower($user->name);
 
-//$test_user = "SinitskiDV";
-//$test_user = "MatoroNN";
-//$test_user = 'LevkinaVN';
-//$test_user = 'CherviakovUV';
-
-//$userlogin = $test_user;
 $encrypted_name = openssl_encrypt($userlogin, $cfg['method'], $cfg['key'].date('Ymd'), 0 , date('YmdYmd'));
 
 // ПОДКЛЮЧЕНИЕ К LDAP И GEDEMIN
@@ -75,7 +69,7 @@ if (!($connect->checkConnection())) {
         }
 
         // ПРОВЕРКА НА НАЛИЧИЕ ПОДЧИНЕННЫХ ГРУПП ДЛЯ УПРАВЛЕНИЯ И ИХ ЗАГРУЗКА
-        $dep_list = [];
+        $dep_list = DBFunctions::isManager($connect->getLdapConn(), $current_user['dn']) ? [$current_user['employeenumber']] : [];
         $dep_list = DBFunctions::getAssignedGroups($connect->getGedeminConn(), $current_user['employeenumber'], $dep_list);
         if (isset($_GET['action']) && $_GET['action'] == 'select') {
             $sel_mgr_sap_id = $_GET['selected_mgr'];
@@ -86,6 +80,9 @@ if (!($connect->checkConnection())) {
         } elseif (count($dep_list) > 0) {
             $sel_mgr_sap_id = $dep_list[0];
             $sel_mgr = DBFunctions::getUserBySapId($connect->getLdapConn(), $sel_mgr_sap_id);
+        } else {
+            $sel_mgr = '';
+            $sel_mgr_sap_id = '';
         }
         $dep_list = DBFunctions::getGroups($connect->getLdapConn(), $current_user['dn'], $dep_list);
         $list_mgrs = [];
@@ -124,7 +121,7 @@ if (!($connect->checkConnection())) {
 
             // ВЫВОД ВЫБРАННОГО ПОДРАЗДЕЛЕНИЯ И ЕГО РУКОВОДИТЕЛЯ
             echo '
-                <form id="assigned" action="./test-talonov" method="get" accept-charset="utf-8">
+                <form id="assigned" action="" method="get" accept-charset="utf-8">
                 <table class="tickettable">
                     <tr>
                         <th colspan="2">Пользователь:</th>

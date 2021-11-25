@@ -37,7 +37,9 @@ class DBFunctions {
                     EXECUTE BLOCK 
                     AS 
                     DECLARE IDUSERCARD INTEGER = 0;
-                    DECLARE IDUSEREXTRA INTEGER = 0; 
+                    DECLARE IDUSEREXTRA INTEGER = 0;
+                    DECLARE OLDEXTRA INTEGER = 0;
+                    DECLARE NEWEXTRA INTEGER = 0; 
                     BEGIN 
                         SELECT USR$CONTACTKEY 
                             FROM 
@@ -52,20 +54,37 @@ class DBFunctions {
                             WHERE 
                                 USR$CONTACTKEY = :IDUSERCARD
                             INTO 
-                                :IDUSEREXTRA; 
-                        
-                        IF (:IDUSEREXTRA = 0) THEN
-                            INSERT INTO USR$MN_EXTRAFOOD (USR$CONTACTKEY, EDITIONDATE, USR$ISSUPPOSED, USR$SUPPOSED_QUANTITY, USR$ISDAYLIMIT) 
-                                VALUES (:IDUSERCARD, \''.date('Y-m-d H:i:s').'\', 1, 1, 0);
-                        ELSE
-                            UPDATE USR$MN_EXTRAFOOD
-                                SET
-                                    EDITIONDATE = \''.date('Y-m-d H:i:s').'\',
-                                    USR$ISSUPPOSED = 1,
-                                    USR$SUPPOSED_QUANTITY = COALESCE(USR$SUPPOSED_QUANTITY, 0) '.($ticket ? '+ 1' : '- 1').',
-                                    USR$ISDAYLIMIT = 0
-                                WHERE
-                                    USR$CONTACTKEY = :IDUSERCARD;
+                                :IDUSEREXTRA;
+                        SELECT USR$SUPPOSED_QUANTITY 
+                            FROM 
+                                USR$MN_EXTRAFOOD 
+                            WHERE 
+                                USR$CONTACTKEY = :IDUSERCARD
+                            INTO 
+                                :OLDEXTRA; 
+                        NEWEXTRA = OLDEXTRA;
+                        WHILE (:NEWEXTRA = :OLDEXTRA) DO
+                        BEGIN
+                            IF (:IDUSEREXTRA = 0) THEN
+                                INSERT INTO USR$MN_EXTRAFOOD (USR$CONTACTKEY, EDITIONDATE, USR$ISSUPPOSED, USR$SUPPOSED_QUANTITY, USR$ISDAYLIMIT) 
+                                    VALUES (:IDUSERCARD, \''.date('Y-m-d H:i:s').'\', 1, 1, 0);
+                            ELSE
+                                UPDATE USR$MN_EXTRAFOOD
+                                    SET
+                                        EDITIONDATE = \''.date('Y-m-d H:i:s').'\',
+                                        USR$ISSUPPOSED = 1,
+                                        USR$SUPPOSED_QUANTITY = COALESCE(USR$SUPPOSED_QUANTITY, 0) '.($ticket ? '+ 1' : '- 1').',
+                                        USR$ISDAYLIMIT = 0
+                                    WHERE
+                                        USR$CONTACTKEY = :IDUSERCARD;
+                            SELECT USR$SUPPOSED_QUANTITY 
+                                FROM 
+                                    USR$MN_EXTRAFOOD 
+                                WHERE 
+                                    USR$CONTACTKEY = :IDUSERCARD
+                                INTO 
+                                    :NEWEXTRA;
+                        END
                         
                         UPDATE OR INSERT INTO  BW_TICKETS (ASSIGN_DATE, TABNUM, CONTACTKEY, TICKET)
                             VALUES(\''.$date.'\', \''.$tabnum.'\', :IDUSERCARD, '.$ticket.')
