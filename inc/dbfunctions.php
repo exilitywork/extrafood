@@ -192,7 +192,7 @@ class DBFunctions {
         
         try {
             $filter = "(&(employeeType>=0)(localeid=".$manager_sap_id."))";
-            $attrs = array("manager", "employeeid", "objectclass", "department", "title", "cn");
+            $attrs = array("manager", "employeeid", "objectclass", "department", "title", "cn", "postalcode");
             $search = ldap_search($ldap_conn, self::$searchbase, $filter, $attrs);
             $info = ldap_get_entries($ldap_conn, $search);
             for ($i = 0; $i < $info['count']; $i++) {
@@ -200,6 +200,11 @@ class DBFunctions {
                     $index = isset($res[$info[$i]['manager'][0]]) ? count($res[$info[$i]['manager'][0]]) : 0;
                     $res[$info[$i]['manager'][0]][$index]['name'] = $info[$i]['cn'][0];
                     $res[$info[$i]['manager'][0]][$index]['tabnum'] = $info[$i]['employeeid'][0];
+                    $vacation = isset($info[$i]['postalcode'][0]) ? explode("-", $info[$i]['postalcode'][0]) : false;
+                    if ($vacation) {
+                        $res[$info[$i]['manager'][0]][$index]['vacation_begin'] = $vacation[0];
+                        $res[$info[$i]['manager'][0]][$index]['vacation_end'] = $vacation[1];
+                    }
                 }
             }
             
@@ -209,22 +214,27 @@ class DBFunctions {
                 $sorted = self::array_orderby($employees, 'name', SORT_ASC, 'tabnum', SORT_ASC);
                 $employees = $sorted;
                 foreach ($employees as $num => $emp) {
-                        $checked = self::getTicket($gedemin_conn, $emp['tabnum'], $date, $loginuser) ? 'checked' : '';
-                        $out .= "
-                            <tr>
-                                <td>".$emp['name']."</td>
-                                <td>".$emp['tabnum']."</td>";
-                        if (self::getGedeminUserId($gedemin_conn, $emp['tabnum'])) {
-                            $out .= "
-                                <td><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>
-                                <td><span style='color: green'>АКТИВНА</td>
-                            </tr>";
-                        } else {
-                            $out .= "
-                                <td></td>
-                                <td><span style='color: red'>НЕАКТИВНА</td>
-                            </tr>";
-                        }
+                    $checked = self::getTicket($gedemin_conn, $emp['tabnum'], $date, $loginuser) ? 'checked' : '';
+                    if (self::getGedeminUserId($gedemin_conn, $emp['tabnum'])) {
+                        $check = "<td><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>";
+                        $card = "<td><span style='color: green'>АКТИВНА</td>";
+                    } else {
+                        $check = "<td></td>";
+                        $card = "<td><span style='color: red'>НЕАКТИВНА</td>";
+                    }
+                    if (isset($emp['vacation_begin']) 
+                                && strtotime($emp['vacation_begin']) <= strtotime($date)
+                                && strtotime($emp['vacation_end']) >= strtotime($date)) {
+                        $check = "<td><span style='color: red'>ОТПУСК</td>";
+                    }
+                    $out .= "
+                        <tr>
+                            <td>".$emp['name']."</td>
+                            <td>".$emp['tabnum']."</td>";
+                    $out .= "
+                        $check
+                        $card
+                    </tr>";
                 }
             }
         } catch (Exception $e) {
@@ -251,7 +261,7 @@ class DBFunctions {
         $out = "";
         try {
             $filter="(&(employeeType>=0)(localeid=".$manager_sap_id."))";
-            $attrs = array("manager", "employeeid", "objectclass", "department", "title", "cn", "sn", "givenName", "initials");
+            $attrs = array("manager", "employeeid", "objectclass", "department", "title", "cn", "sn", "givenName", "initials", "postalcode");
             $search=ldap_search($ldap_conn, "OU=СООО Белвест,DC=belwest,DC=corp", $filter, $attrs);
             $info = ldap_get_entries($ldap_conn, $search);
             for ($i=0; $i<$info["count"]; $i++) {
@@ -259,6 +269,11 @@ class DBFunctions {
                     $index = isset($res[$info[$i]["manager"][0]]) ? count($res[$info[$i]["manager"][0]]) : 0;
                     $res[$info[$i]["manager"][0]][$index]['name'] = $info[$i]["sn"][0].' '.substr($info[$i]["givenname"][0], 0, 2).'.'.$info[$i]["initials"][0].'.';
                     $res[$info[$i]["manager"][0]][$index]['tabnum'] = $info[$i]['employeeid'][0];
+                    $vacation = isset($info[$i]['postalcode'][0]) ? explode("-", $info[$i]['postalcode'][0]) : false;
+                    if ($vacation) {
+                        $res[$info[$i]['manager'][0]][$index]['vacation_begin'] = $vacation[0];
+                        $res[$info[$i]['manager'][0]][$index]['vacation_end'] = $vacation[1];
+                    }
                 }
             }
                 
@@ -288,9 +303,13 @@ class DBFunctions {
                         <tr id='".$emp['tabnum']."'>
                             <td>".$emp['name']."</td>";
                     for ($i = 1; $i <= $days; $i++) {
-                        if (isset($tickets[$i])) {
-                                //$out .= "<td>".($tickets[$i] ? '&#10004;' : '-')."</td>";
-                                $out .= "<td style='background: ".($tickets[$i] ? 'rgb(178, 224, 182)' : '')."'></td>";
+                        if (isset($emp['vacation_begin']) 
+                                && strtotime($emp['vacation_begin']) <= strtotime($i.'.'.$month.'.'.$year)
+                                && strtotime($emp['vacation_end']) >= strtotime($i.'.'.$month.'.'.$year)) {
+                            $out .= "<td style='background: orange'></td>";
+                        } elseif (isset($tickets[$i])) {  
+                            //$out .= "<td>".($tickets[$i] ? '&#10004;' : '-')."</td>";
+                            $out .= "<td style='background: ".($tickets[$i] ? 'rgb(178, 224, 182)' : '')."'></td>";
                         } else {
                             //$out .='<td>-</td>';
                             $out .="<td></td>";

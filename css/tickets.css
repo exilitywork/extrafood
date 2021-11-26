@@ -227,3 +227,11 @@
     width: 80px;
     background-color: orange;
   }
+
+  #square {
+    width: 23px;
+    height: 18px;
+    display: inline-block;
+    vertical-align: middle;
+    outline: 1px solid #000;
+}
