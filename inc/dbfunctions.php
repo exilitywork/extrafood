@@ -32,14 +32,17 @@ class DBFunctions {
         $connect = new Connections();
         if ($connect->checkConnection()) {
             $gedemin_conn = $connect->getGedeminConn();
+            $d = explode('-', $date);
+            $year = $d[0];
+            $month = $d[1];
+            $last_day = cal_days_in_month(CAL_GREGORIAN, $month, $year);
             try {
                 $sql = '
                     EXECUTE BLOCK 
                     AS 
                     DECLARE IDUSERCARD INTEGER = 0;
                     DECLARE IDUSEREXTRA INTEGER = 0;
-                    DECLARE OLDEXTRA INTEGER = 0;
-                    DECLARE NEWEXTRA INTEGER = 0; 
+                    DECLARE TICKETS INTEGER = 0; 
                     BEGIN 
                         SELECT USR$CONTACTKEY 
                             FROM 
@@ -55,40 +58,30 @@ class DBFunctions {
                                 USR$CONTACTKEY = :IDUSERCARD
                             INTO 
                                 :IDUSEREXTRA;
-                        SELECT USR$SUPPOSED_QUANTITY 
-                            FROM 
-                                USR$MN_EXTRAFOOD 
-                            WHERE 
-                                USR$CONTACTKEY = :IDUSERCARD
-                            INTO 
-                                :OLDEXTRA; 
-                        NEWEXTRA = OLDEXTRA;
-                        WHILE (:NEWEXTRA = :OLDEXTRA) DO
-                        BEGIN
-                            IF (:IDUSEREXTRA = 0) THEN
-                                INSERT INTO USR$MN_EXTRAFOOD (USR$CONTACTKEY, EDITIONDATE, USR$ISSUPPOSED, USR$SUPPOSED_QUANTITY, USR$ISDAYLIMIT) 
-                                    VALUES (:IDUSERCARD, \''.date('Y-m-d H:i:s').'\', 1, 1, 0);
-                            ELSE
-                                UPDATE USR$MN_EXTRAFOOD
-                                    SET
-                                        EDITIONDATE = \''.date('Y-m-d H:i:s').'\',
-                                        USR$ISSUPPOSED = 1,
-                                        USR$SUPPOSED_QUANTITY = COALESCE(USR$SUPPOSED_QUANTITY, 0) '.($ticket ? '+ 1' : '- 1').',
-                                        USR$ISDAYLIMIT = 0
-                                    WHERE
-                                        USR$CONTACTKEY = :IDUSERCARD;
-                            SELECT USR$SUPPOSED_QUANTITY 
-                                FROM 
-                                    USR$MN_EXTRAFOOD 
-                                WHERE 
-                                    USR$CONTACTKEY = :IDUSERCARD
-                                INTO 
-                                    :NEWEXTRA;
-                        END
-                        
                         UPDATE OR INSERT INTO  BW_TICKETS (ASSIGN_DATE, TABNUM, CONTACTKEY, TICKET)
                             VALUES(\''.$date.'\', \''.$tabnum.'\', :IDUSERCARD, '.$ticket.')
                             MATCHING(CONTACTKEY, ASSIGN_DATE);
+                        SELECT COUNT(*) 
+                            FROM 
+                                BW_TICKETS 
+                            WHERE 
+                                CONTACTKEY = :IDUSERCARD 
+                                AND TICKET = \'1\'
+                                AND ASSIGN_DATE BETWEEN \'01.'.$month.'.'.$year.'\' AND \''.$last_day.'.'.$month.'.'.$year.'\'
+                            INTO 
+                                :TICKETS;
+                        IF (:IDUSEREXTRA = 0) THEN
+                            INSERT INTO USR$MN_EXTRAFOOD (USR$CONTACTKEY, EDITIONDATE, USR$ISSUPPOSED, USR$SUPPOSED_QUANTITY, USR$ISDAYLIMIT) 
+                                VALUES (:IDUSERCARD, \''.date('Y-m-d H:i:s').'\', 1, :TICKETS, 0);
+                        ELSE
+                            UPDATE USR$MN_EXTRAFOOD
+                                SET
+                                    EDITIONDATE = \''.date('Y-m-d H:i:s').'\',
+                                    USR$ISSUPPOSED = 1,
+                                    USR$SUPPOSED_QUANTITY = :TICKETS,
+                                    USR$ISDAYLIMIT = 0
+                                WHERE
+                                    USR$CONTACTKEY = :IDUSERCARD;
                     END
                 ';
                 ibase_query($gedemin_conn, $sql);
