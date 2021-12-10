@@ -218,7 +218,11 @@ class DBFunctions {
                     if (isset($emp['vacation_begin']) 
                                 && strtotime($emp['vacation_begin']) <= strtotime($date)
                                 && strtotime($emp['vacation_end']) >= strtotime($date)) {
-                        $check = "<td><span style='color: red'>ОТПУСК</td>";
+                        if ($checked) {
+                            $check = "<td style='background-color: red'><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>";
+                        } else {
+                            $check = "<td><span style='color: red'>ОТПУСК</td>";
+                        }
                     }
                     $out .= "
                         <tr>
@@ -299,7 +303,7 @@ class DBFunctions {
                         if (isset($emp['vacation_begin']) 
                                 && strtotime($emp['vacation_begin']) <= strtotime($i.'.'.$month.'.'.$year)
                                 && strtotime($emp['vacation_end']) >= strtotime($i.'.'.$month.'.'.$year)) {
-                            $out .= "<td style='background: orange'></td>";
+                            $out .= "<td style='background: ".(isset($tickets[$i]) ? "red" : "orange")."'></td>";
                         } elseif (isset($tickets[$i])) {  
                             //$out .= "<td>".($tickets[$i] ? '&#10004;' : '-')."</td>";
                             $out .= "<td style='background: ".($tickets[$i] ? 'rgb(178, 224, 182)' : '')."'></td>";

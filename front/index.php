@@ -245,6 +245,8 @@ if (!($connect->checkConnection())) {
             echo "<table id='calendartable' class='tickettable calendartable'>";
             echo DBFunctions::loadIssuedTickets($connect->getLdapConn(), $connect->getGedeminConn(), $sel_mgr_sap_id, date('Y-m-d'));
             echo "</table>";
+            echo "<div id='square' style='background: red'></div> - ОШИБОЧНО ВЫДАН ТАЛОН (сотрудник отсутствовал в день выдачи)<br>";
+            echo "<div style='height: 1px;'></div>";
             echo "<div id='square' style='background: orange'></div> - ОТПУСК<br>";
             echo "<div style='height: 1px;'></div>";
             echo "<div id='square' style='background: rgb(178, 224, 182)'></div> - ТАЛОН ВЫДАН<br>";
