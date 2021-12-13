@@ -88,7 +88,6 @@ if (!($connect->checkConnection())) {
         if (in_array('administrator', $user->roles)) {
             $gen_dir = DBFunctions::getUserBySapId($connect->getLdapConn(), '50009164');
             $current_user['dn'] = $gen_dir['dn'];
-            $current_user['employeenumber'] = $gen_dir['employeenumber'];
         }
         $dep_list = DBFunctions::getGroups($connect->getLdapConn(), $current_user['dn'], $dep_list);
         $list_mgrs = [];
@@ -115,7 +114,7 @@ if (!($connect->checkConnection())) {
 
         $invalid_mgr = true;
         foreach ($list_mgrs as $mgr) {
-            if ($mgr['employeenumber'] == $current_user['employeenumber']) {
+            if ($mgr['employeenumber'] == $current_user['employeenumber'] || in_array('administrator', $user->roles)) {
                 $invalid_mgr = false;
                 break;
             }
