@@ -84,6 +84,12 @@ if (!($connect->checkConnection())) {
             $sel_mgr = '';
             $sel_mgr_sap_id = '';
         }
+        // ПРОВЕРКА ПРИНАДЛЕЖНОСТИ ПОЛЬЗОВАТЕЛЯ К АДМИНИСТРАТОРАМ (50009164 - SAP ID гендиректора)
+        if (in_array('administrator', $user->roles)) {
+            $gen_dir = DBFunctions::getUserBySapId($connect->getLdapConn(), '50009164');
+            $current_user['dn'] = $gen_dir['dn'];
+            $current_user['employeenumber'] = $gen_dir['employeenumber'];
+        }
         $dep_list = DBFunctions::getGroups($connect->getLdapConn(), $current_user['dn'], $dep_list);
         $list_mgrs = [];
         $manager = $sel_mgr;

@@ -522,10 +522,10 @@ class DBFunctions {
             if ($users['count'] > 0) {
                 foreach ($users as $key => $employee) {
 
-                    if ($employee['employeetype'][0] == "Офис" && $employee['localeid'][0] == $employee['employeenumber'][0]) {
+                    if ($employee['employeetype'][0] == "Офис" && isset($employee['localeid']) && $employee['localeid'][0] == $employee['employeenumber'][0]) {
                         array_push($dep_list, $employee['employeenumber'][0]);
                     }
-                    if ($employee['employeetype'][0] == "Офис" && $employee['localeid'][0] != $employee['employeenumber'][0]) {
+                    if ($employee['employeetype'][0] == "Офис" && isset($employee['localeid']) && $employee['localeid'][0] != $employee['employeenumber'][0]) {
                         if (self::isManager($ldap_conn, $employee['dn'])) {
                             array_push($dep_list, $employee['employeenumber'][0]);
                             $dep_list = self::getGroups($ldap_conn, $employee['dn'], $dep_list);
