@@ -113,10 +113,14 @@ if (!($connect->checkConnection())) {
         }
 
         $invalid_mgr = true;
-        foreach ($list_mgrs as $mgr) {
-            if ($mgr['employeenumber'] == $current_user['employeenumber'] || in_array('administrator', $user->roles)) {
-                $invalid_mgr = false;
-                break;
+        if (in_array('administrator', $user->roles)) {
+            $invalid_mgr = false;
+        } else {
+            foreach ($list_mgrs as $mgr) {
+                if ($mgr['employeenumber'] == $current_user['employeenumber']) {
+                    $invalid_mgr = false;
+                    break;
+                }
             }
         }
         if ($invalid_mgr) {
