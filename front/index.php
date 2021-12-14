@@ -275,7 +275,8 @@ if (!($connect->checkConnection())) {
                     });
 
                     function updateTicket(el) {
-                        let tabnum = jQuery(el).closest(\'td\').prev().text();
+                        let tdCheck = jQuery(el).closest(\'td\');
+                        let tabnum = tdCheck.prev().text();
                         let date = jQuery(\'#date\').val();
                         let ticket = jQuery(el).is(\':checked\') ? 1 : 0;
                         if(isNaN((new Date(date)).getTime())) {
@@ -297,13 +298,18 @@ if (!($connect->checkConnection())) {
                                         let cell = jQuery(td[(new Date(date)).getDate()]);
                                         let total = jQuery(td[td.length - 3]);
                                         let remain = jQuery(td[td.length - 1]);
-                                        if (cell.css("background-color") != "rgb(178, 224, 182)") {
-                                            //cell.html("&#10004;");
+                                        if (cell.css("background-color") != "rgb(178, 224, 182)" && cell.css("background-color") != "rgb(255, 0, 0)") {
                                             cell.css("background-color", "rgb(178, 224, 182)");
                                             total.text(parseInt(total.text()) + 1);
                                             remain.text(parseInt(remain.text()) + 1);
+                                        } else if (cell.css("background-color") == "rgb(255, 0, 0)") {
+                                            tdCheck.removeAttr("style");
+                                            tdCheck.text("ОТПУСК");
+                                            tdCheck.css("color", "red");
+                                            cell.css("background-color", "orange");
+                                            total.text(parseInt(total.text()) - 1);
+                                            remain.text(parseInt(remain.text()) - 1);
                                         } else {
-                                            //cell.text("-");
                                             cell.removeAttr("style");
                                             total.text(parseInt(total.text()) - 1);
                                             remain.text(parseInt(remain.text()) - 1);

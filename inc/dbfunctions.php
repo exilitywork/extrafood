@@ -303,7 +303,8 @@ class DBFunctions {
                         if (isset($emp['vacation_begin']) 
                                 && strtotime($emp['vacation_begin']) <= strtotime($i.'.'.$month.'.'.$year)
                                 && strtotime($emp['vacation_end']) >= strtotime($i.'.'.$month.'.'.$year)) {
-                            $out .= "<td style='background: ".(isset($tickets[$i]) ? "red" : "orange")."'></td>";
+                            $out .= "<td style='background: ".(isset($tickets[$i]) && $tickets[$i] ? "red" : "orange")."'></td>";
+                            //print_r($tickets[$i]);
                         } elseif (isset($tickets[$i])) {  
                             //$out .= "<td>".($tickets[$i] ? '&#10004;' : '-')."</td>";
                             $out .= "<td style='background: ".($tickets[$i] ? 'rgb(178, 224, 182)' : '')."'></td>";
