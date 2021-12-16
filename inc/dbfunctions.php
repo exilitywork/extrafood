@@ -221,7 +221,7 @@ class DBFunctions {
                         if ($checked) {
                             $check = "<td style='background-color: red'><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>";
                         } else {
-                            $check = "<td><span style='color: red'>ОТПУСК</td>";
+                            $check = "<td style='background-color: orange'><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>";
                         }
                     }
                     $out .= "
