@@ -143,7 +143,7 @@ if (!($connect->checkConnection())) {
                     </tr>';
             if (count($dep_list) == 1) { 
                 echo '<tr>
-                        <td colspan="2">'.$sel_mgr['department'].' ('.$sel_mgr['fio'].')</td>
+                        <td colspan="2">'.$sel_mgr['department'].' ('.$sel_mgr['name'].')</td>
                         <input type="hidden" name="selected_mgr" value="'.$sel_mgr_sap_id.'">
                     </tr>
                 ';
@@ -156,7 +156,7 @@ if (!($connect->checkConnection())) {
                 foreach ($dep_list as $key => $mgr_id) {
                     $selected = $sel_mgr_sap_id == $mgr_id ? 'selected' : '';
                     $user_info = DBFunctions::getUserBySapId($connect->getLdapConn(), $mgr_id);
-                    echo '<option '.$selected.' value="'.$mgr_id.'">'.$user_info['department'].' ('.$user_info['fio'].')</option>';
+                    echo '<option '.$selected.' value="'.$mgr_id.'">'.$user_info['department'].' ('.$user_info['name'].')</option>';
                 }
                 echo '      </select>
                         </td>

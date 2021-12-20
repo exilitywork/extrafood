@@ -185,13 +185,13 @@ class DBFunctions {
         
         try {
             $filter = "(&(employeeType>=0)(localeid=".$manager_sap_id."))";
-            $attrs = array("manager", "employeeid", "objectclass", "department", "title", "cn", "postalcode");
+            $attrs = array("manager", "employeeid", "objectclass", "department", "title", "cn", "postalcode", "sn", "givenname", "initials");
             $search = ldap_search($ldap_conn, self::$searchbase, $filter, $attrs);
             $info = ldap_get_entries($ldap_conn, $search);
             for ($i = 0; $i < $info['count']; $i++) {
                 if (in_array('user', $info[$i]['objectclass'])) {
                     $index = isset($res[$info[$i]['manager'][0]]) ? count($res[$info[$i]['manager'][0]]) : 0;
-                    $res[$info[$i]['manager'][0]][$index]['name'] = $info[$i]['cn'][0];
+                    $res[$info[$i]['manager'][0]][$index]['name'] = $info[$i]["sn"][0].' '.substr($info[$i]["givenname"][0], 0, 2).'.'.$info[$i]["initials"][0].'.';
                     $res[$info[$i]['manager'][0]][$index]['tabnum'] = $info[$i]['employeeid'][0];
                     $vacation = isset($info[$i]['postalcode'][0]) ? explode("-", $info[$i]['postalcode'][0]) : false;
                     if ($vacation) {
@@ -204,34 +204,39 @@ class DBFunctions {
             $disabled = date_format(date_create($date), 'm') == date('m') ? '' : 'disabled';
 
             foreach ($res as $manager => $employees) {
+                array_push($employees, self::getUserBySapId($ldap_conn, $manager_sap_id));
                 $sorted = self::array_orderby($employees, 'name', SORT_ASC, 'tabnum', SORT_ASC);
                 $employees = $sorted;
+                $prev_tabnum = 0;
                 foreach ($employees as $num => $emp) {
-                    $checked = self::getTicket($gedemin_conn, $emp['tabnum'], $date, $loginuser) ? 'checked' : '';
-                    if (self::getGedeminUserId($gedemin_conn, $emp['tabnum'])) {
-                        $check = "<td><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>";
-                        $card = "<td><span style='color: green'>АКТИВНА</td>";
-                    } else {
-                        $check = "<td></td>";
-                        $card = "<td><span style='color: red'>НЕАКТИВНА</td>";
-                    }
-                    if (isset($emp['vacation_begin']) 
-                                && strtotime($emp['vacation_begin']) <= strtotime($date)
-                                && strtotime($emp['vacation_end']) >= strtotime($date)) {
-                        if ($checked) {
-                            $check = "<td style='background-color: red'><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>";
+                    if ($prev_tabnum != $emp['tabnum']) {
+                        $checked = self::getTicket($gedemin_conn, $emp['tabnum'], $date, $loginuser) ? 'checked' : '';
+                        if (self::getGedeminUserId($gedemin_conn, $emp['tabnum'])) {
+                            $check = "<td><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>";
+                            $card = "<td><span style='color: green'>АКТИВНА</td>";
                         } else {
-                            $check = "<td style='background-color: orange'><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>";
+                            $check = "<td></td>";
+                            $card = "<td><span style='color: red'>НЕАКТИВНА</td>";
                         }
+                        if (isset($emp['vacation_begin']) 
+                                    && strtotime($emp['vacation_begin']) <= strtotime($date)
+                                    && strtotime($emp['vacation_end']) >= strtotime($date)) {
+                            if ($checked) {
+                                $check = "<td style='background-color: red'><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>";
+                            } else {
+                                $check = "<td style='background-color: orange'><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>";
+                            }
+                        }
+                        $out .= "
+                            <tr>
+                                <td>".$emp['name']."</td>
+                                <td>".$emp['tabnum']."</td>";
+                        $out .= "
+                            $check
+                            $card
+                        </tr>";
+                        $prev_tabnum = $emp['tabnum'];
                     }
-                    $out .= "
-                        <tr>
-                            <td>".$emp['name']."</td>
-                            <td>".$emp['tabnum']."</td>";
-                    $out .= "
-                        $check
-                        $card
-                    </tr>";
                 }
             }
         } catch (Exception $e) {
@@ -292,34 +297,38 @@ class DBFunctions {
                 </tr></thead><tbody>
             ";
             foreach ($res as $mananger => $employees) {
+                array_push($employees, self::getUserBySapId($ldap_conn, $manager_sap_id));
                 $sorted = self::array_orderby($employees, 'name', SORT_ASC, 'tabnum', SORT_ASC);
                 $employees = $sorted;
+                $prev_tabnum = 0;
                 foreach ($employees as $num => $emp) {
-                    $tickets = self::getAllTickets($gedemin_conn, $emp['tabnum'], $year, $month, $days);
-                    $out .= "
-                        <tr id='".$emp['tabnum']."'>
-                            <td>".$emp['name']."</td>";
-                    for ($i = 1; $i <= $days; $i++) {
-                        if (isset($emp['vacation_begin']) 
-                                && strtotime($emp['vacation_begin']) <= strtotime($i.'.'.$month.'.'.$year)
-                                && strtotime($emp['vacation_end']) >= strtotime($i.'.'.$month.'.'.$year)) {
-                            $out .= "<td style='background: ".(isset($tickets[$i]) && $tickets[$i] ? "red" : "orange")."'></td>";
-                            //print_r($tickets[$i]);
-                        } elseif (isset($tickets[$i])) {  
-                            //$out .= "<td>".($tickets[$i] ? '&#10004;' : '-')."</td>";
-                            $out .= "<td style='background: ".($tickets[$i] ? 'rgb(178, 224, 182)' : '')."'></td>";
-                        } else {
-                            //$out .='<td>-</td>';
-                            $out .="<td></td>";
+                    if ($prev_tabnum != $emp['tabnum']) {
+                        $tickets = self::getAllTickets($gedemin_conn, $emp['tabnum'], $year, $month, $days);
+                        $out .= "
+                            <tr id='".$emp['tabnum']."'>
+                                <td>".$emp['name']."</td>";
+                        for ($i = 1; $i <= $days; $i++) {
+                            if (isset($emp['vacation_begin']) 
+                                    && strtotime($emp['vacation_begin']) <= strtotime($i.'.'.$month.'.'.$year)
+                                    && strtotime($emp['vacation_end']) >= strtotime($i.'.'.$month.'.'.$year)) {
+                                $out .= "<td style='background: ".(isset($tickets[$i]) && $tickets[$i] ? "red" : "orange")."'></td>";
+                            } elseif (isset($tickets[$i])) {  
+                                //$out .= "<td>".($tickets[$i] ? '&#10004;' : '-')."</td>";
+                                $out .= "<td style='background: ".($tickets[$i] ? 'rgb(178, 224, 182)' : '')."'></td>";
+                            } else {
+                                //$out .='<td>-</td>';
+                                $out .="<td></td>";
+                            }
                         }
+                        $stats = self::getGedeminTicketStats($gedemin_conn, self::getGedeminUserId($gedemin_conn, $emp['tabnum']));
+                        $out .= "
+                                <td>".$tickets['total']."</td>
+                                <td>".$stats['spent']."</td>
+                                <td>".$stats['remain']."</td>
+                            </tr>
+                        ";
+                        $prev_tabnum = $emp['tabnum'];
                     }
-                    $stats = self::getGedeminTicketStats($gedemin_conn, self::getGedeminUserId($gedemin_conn, $emp['tabnum']));
-                    $out .= "
-                            <td>".$tickets['total']."</td>
-                            <td>".$stats['spent']."</td>
-                            <td>".$stats['remain']."</td>
-                        </tr>
-                    ";
                 }
             }
             $out .= "
@@ -353,12 +362,25 @@ class DBFunctions {
         global $user;
         try {
             $filter="(&(employeeType>=0)(employeenumber=$employeenumber))";
-            $attrs = array('manager', 'employeeid', 'objectclass', 'department', 'title', 'cn', 'samaccountname', 'departmentnumber', 'employeenumber', 'localeid');
+            $attrs = array(
+                'manager', 
+                'employeeid', 
+                'objectclass', 
+                'department', 
+                'title', 
+                'sn', 
+                'samaccountname', 
+                'departmentnumber', 
+                'employeenumber', 
+                'localeid', 
+                'givenname', 
+                'initials'
+            );
             $manager = [];
             $search = ldap_search($ldap_conn, self::$searchbase, $filter, $attrs);
             $info = ldap_get_entries($ldap_conn, $search);
             if ($info['count'] > 0) {
-                $manager['name']                = $info[0]['cn'][0];
+                $manager['name']                = $info[0]['sn'][0].' '.substr($info[0]['givenname'][0], 0, 2).'.'.$info[0]['initials'][0].'.';
                 $manager['department']          = $info[0]['department'][0];
                 $manager['title']               = $info[0]['title'][0];
                 $manager['dn']                  = $info[0]['dn'];
@@ -366,7 +388,7 @@ class DBFunctions {
                 $manager['employeeid']          = $info[0]['employeeid'][0];
                 $manager['departmentnumber']    = $info[0]['departmentnumber'][0];
                 $manager['employeenumber']      = $info[0]['employeenumber'][0];
-                $manager['localeid']            = $info[0]['localeid'][0];;
+                $manager['localeid']            = $info[0]['localeid'][0];
                 return $manager;
             }
         } catch (Exception $e) {
@@ -413,7 +435,6 @@ class DBFunctions {
             $sql = 'SELECT * FROM BW_TICKET_MANAGERS WHERE DEPARTMENT_MANAGER = \''.$dep_mgr_sap_id.'\'';
             $res = ibase_query($gedemin_conn, $sql);
             while ($row = ibase_fetch_assoc($res)) {
-                //print_r($row);
                 $assigned[$i] = $row['ASSIGNED_MANAGER'];
                 $i++;
             }
@@ -475,7 +496,20 @@ class DBFunctions {
         global $user;
         try {
             $filter = "(&(employeeType>=0)(objectCategory=person)(objectClass=user)(employeenumber=".$sap_emp_id."))";
-            $attrs = array('cn', 'department', 'employeenumber', 'manager', 'name', 'localeid', 'title', 'givenname', 'initials', 'sn');
+            $attrs = array(
+                'cn', 
+                'department', 
+                'employeenumber', 
+                'manager', 
+                'name', 
+                'localeid', 
+                'title', 
+                'givenname', 
+                'initials', 
+                'sn', 
+                'postalcode', 
+                'employeeid'
+            );
             $search = ldap_search($ldap_conn, DBFunctions::$searchbase, $filter, $attrs);
             $info = ldap_get_entries($ldap_conn, $search);
             if ($info['count'] > 0) {
@@ -483,11 +517,16 @@ class DBFunctions {
                 $employee['dn']             = $info[0]['dn'];
                 $employee['department']     = $info[0]['department'][0];
                 $employee['employeenumber'] = $info[0]['employeenumber'][0];
+                $employee['tabnum']         = $info[0]['employeeid'][0];
                 $employee['manager']        = $info[0]['manager'][0];
-                $employee['name']           = $info[0]['name'][0];
                 $employee['title']          = $info[0]['title'][0];
                 $employee['localeid']       = $info[0]['localeid'][0];
-                $employee['fio']            = $info[0]['sn'][0].' '.substr($info[0]['givenname'][0], 0, 2).'.'.$info[0]['initials'][0].'.';
+                $employee['name']            = $info[0]['sn'][0].' '.substr($info[0]['givenname'][0], 0, 2).'.'.$info[0]['initials'][0].'.';
+                $vacation = isset($employee['postalcode'][0]) ? explode("-", $employee['postalcode'][0]) : false;
+                    if ($vacation) {
+                        $employee['vacation_begin'] = $vacation[0];
+                        $employee['vacation_end'] = $vacation[1];
+                    }
                 return $employee;
             }
         } catch (Exception $e) {
@@ -596,9 +635,9 @@ class DBFunctions {
                 $cur_user['departmentnumber']   = $users[0]['departmentnumber'][0];
                 $cur_user['employeenumber']     = $users[0]['employeenumber'][0];
                 $cur_user['localeid']           = $users[0]['localeid'][0];
-                $cur_user['name']               = $users[0]['name'][0];
+                //$cur_user['name']               = $users[0]['name'][0];
                 $cur_user['title']              = $users[0]['title'][0];
-                $cur_user['fio']                = $users[0]['sn'][0].' '.substr($users[0]['givenname'][0], 0, 2).'.'.$users[0]['initials'][0].'.';
+                $cur_user['name']               = $users[0]['sn'][0].' '.substr($users[0]['givenname'][0], 0, 2).'.'.$users[0]['initials'][0].'.';
                 return $cur_user;
             }
         } catch (Exception $e) {
