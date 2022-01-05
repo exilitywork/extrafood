@@ -163,7 +163,7 @@ if (!($connect->checkConnection())) {
                         <td>
                             <button type="submit" class="custom-button add-button" name="action" value="select">Выбрать</button>
                         </td>
-                    </tr>';  
+                    </tr>';
             }
 
             // ВЫВОД СПИСКА ОТВЕСТВЕННЫХ ЛИЦ ПО ВЫБРАННОМУ ПОДРАЗДЕЛЕНИЮ

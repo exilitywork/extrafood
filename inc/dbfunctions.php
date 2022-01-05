@@ -201,7 +201,11 @@ class DBFunctions {
                 }
             }
             
-            $disabled = date_format(date_create($date), 'm') == date('m') ? '' : 'disabled';
+            if (date_format(date_create($date), 'm') == date('m') && date_format(date_create($date), 'd') <= date('d')) {
+                $disabled = '';
+            } else {
+                $disabled = 'disabled';
+            }
 
             foreach ($res as $manager => $employees) {
                 array_push($employees, self::getUserBySapId($ldap_conn, $manager_sap_id));
@@ -214,18 +218,18 @@ class DBFunctions {
                         if (self::getGedeminUserId($gedemin_conn, $emp['tabnum'])) {
                             $check = "<td><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>";
                             $card = "<td><span style='color: green'>АКТИВНА</td>";
+                            if (isset($emp['vacation_begin']) 
+                                    && strtotime($emp['vacation_begin']) <= strtotime($date)
+                                    && strtotime($emp['vacation_end']) >= strtotime($date)) {
+                                if ($checked) {
+                                    $check = "<td style='background-color: red'><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>";
+                                } else {
+                                    $check = "<td style='background-color: orange'><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>";
+                                }
+                            }
                         } else {
                             $check = "<td></td>";
                             $card = "<td><span style='color: red'>НЕАКТИВНА</td>";
-                        }
-                        if (isset($emp['vacation_begin']) 
-                                    && strtotime($emp['vacation_begin']) <= strtotime($date)
-                                    && strtotime($emp['vacation_end']) >= strtotime($date)) {
-                            if ($checked) {
-                                $check = "<td style='background-color: red'><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>";
-                            } else {
-                                $check = "<td style='background-color: orange'><input type='checkbox' onchange='updateTicket(this)' $checked $disabled></td>";
-                            }
                         }
                         $out .= "
                             <tr>
