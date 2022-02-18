@@ -52,14 +52,12 @@ if (!(checkdate($date_arr[1], $date_arr[2], $date_arr[0]))) {
 }
 
 if (strlen($tab_num) != 8) {
-    Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user." | ajax/updateticket.php - Некорректный табальный номер ".$tab_num." в POST");
+    Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user." | ajax/updateticket.php - Некорректный табельный номер ".$tab_num." в POST");
     print '{"reply": "Внимание! Некорректный табельный номер: '.$tab_num.'! Обратитесь в ОИТ!"}';
     die();
 }
-//file_put_contents('log.log', $tab_num);
 
-//$date .= ' 00:00';
-$result = DBFunctions::updateTicket($tab_num, $date, $ticket);
+$result = DBFunctions::updateTicket($tab_num, $date, $ticket, $user);
 if ($result) {
     Logger::info($_SERVER['HTTP_X_REAL_IP']." | ".$user." | ajax/updateticket.php - Обновлен статус выдачи талона на дату для ".$date." по табельному ".$tab_num);
     print '{"reply": "TRUE"}';

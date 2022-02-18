@@ -111,6 +111,7 @@ if (!($connect->checkConnection())) {
                                         'title'             => $manager['title']]);
             }
         }
+DBFunctions::getGedeminTicketUse($connect->getGedeminConn(), '00023283', '01.01.2022', '31.01.2022');
 
         $invalid_mgr = true;
         if (in_array('administrator', $user->roles)) {
@@ -250,9 +251,12 @@ if (!($connect->checkConnection())) {
                 'Ноябрь',
                 'Декабрь'
                 ];
-            echo "<h3 id='selected-month' align='center'>".($arr[date('n') - 1])." - ".date('Y')."</h3>";
+            echo "<table class='div-container'>";
+            echo "<tr><th id='selected-month' style='text-align: center; font-size: 18px; padding: 0 3px 0 3px;'>".($arr[date('n') - 1])." - ".date('Y')." </th></tr>";
+            echo "<tr><td id='remains'></td></tr>";
+            echo '</table>';
             echo "<table id='calendartable' class='tickettable calendartable'>";
-            echo DBFunctions::loadIssuedTickets($connect->getLdapConn(), $connect->getGedeminConn(), $sel_mgr_sap_id, date('Y-m-d'));
+            echo DBFunctions::loadIssuedTickets($connect->getLdapConn(), $connect->getGedeminConn(), $sel_mgr_sap_id, date('Y-m-d'), $user->name);
             echo "</table>";
             echo "<div id='square' style='background: red'></div> - ОШИБОЧНО ВЫДАН ТАЛОН (сотрудник отсутствовал в день выдачи)<br>";
             echo "<div style='height: 1px;'></div>";
@@ -273,6 +277,56 @@ if (!($connect->checkConnection())) {
                         order: 1, // Обратный порядок
                         delim: \'-\' // Разделитель между числами тире
                     });
+
+                    if(jQuery(\'sup\').length) {
+                        jQuery(\'#remains\').html("<button id=\'button-remains\' class=\'custom-button\' onclick=\'updateRemains()\'>Перенести остатки</button>");
+                    }
+
+                    function updateRemains() {
+                        let remains = [];
+                        let tds;
+                        let trs = jQuery(\'#calendartable\').children(\'tbody\').children(\'tr\');
+                        jQuery(trs).each(function(index) {
+                            tds = jQuery(this).children(\'td\');
+                            if(jQuery(tds[1]).children(\'sup\').text()) {
+                                remains.push(jQuery(this).attr(\'id\'));
+                            }
+                        });
+                        if(remains.length) {
+                            console.log(remains);
+                            jQuery.ajax({
+                                type: "POST",
+                                url: "'.$_SERVER['HTTP_X_FORWARDED_PROTO'].'://'.$_SERVER['HTTP_HOST'].'/sites/all/modules/bw-tickets/ajax/updateremains.php",
+                                data:{
+                                    remains : JSON.stringify(remains),
+                                    user : "'.$encrypted_name.'"
+                                },
+                                dataType: "json",
+                                success: function(data) {
+                                    if (data.reply == "TRUE") {
+                                        jQuery(trs).each(function(index) {
+                                            tds = jQuery(this).children(\'td\');
+                                            let total = jQuery(tds[tds.length - 3]);
+                                            let remain = jQuery(tds[tds.length - 1]);
+                                            if(jQuery(tds[1]).children(\'sup\').text()) {
+                                                jQuery(tds[1]).html("1");
+                                                total.text(parseInt(total.text()) + 1);
+                                                remain.text(parseInt(remain.text()) + 1);
+                                            }
+                                        });
+                                        jQuery(\'#remains\').addClass("success-text");
+                                        jQuery(\'#remains\').html("Остатки перенесены!");
+                                        //alert("УСПЕХ");
+                                    } else {
+                                        alert("Внимание! Некорректный ответ сервера! Обратитесь в ОИТ!");
+                                    }
+                                },
+                                error: function() {
+                                    alert("Внимание! Ошибка сохранения данных! Обратитесь в ОИТ!");
+                                }
+                            });
+                        }
+                    }
 
                     function updateTicket(el) {
                         let tdCheck = jQuery(el).closest(\'td\');
@@ -296,7 +350,7 @@ if (!($connect->checkConnection())) {
                                 success: function(data) {
                                     if (data.reply == "TRUE") {
                                         let td = jQuery(\'#\' + tabnum).children(\'td\');
-                                        let cell = jQuery(td[(new Date(date)).getDate()]);
+                                        let cell = jQuery(td[(new Date(date)).getDate() + 1]);
                                         let total = jQuery(td[td.length - 3]);
                                         let remain = jQuery(td[td.length - 1]);
                                         if (checked){
@@ -309,7 +363,7 @@ if (!($connect->checkConnection())) {
                                         if (cell.css("background-color") == "rgb(178, 224, 182)") {
                                             cell.removeAttr("style");
                                         } else if (cell.css("background-color") == "rgb(255, 0, 0)") {
-                                            tdCheck.css("background-color", "orange");                                            
+                                            tdCheck.css("background-color", "orange");
                                             cell.css("background-color", "rgb(255, 165, 0)");
                                         } else if (cell.css("background-color") == "rgb(255, 165, 0)") {
                                             tdCheck.css("background-color", "red");
@@ -359,6 +413,7 @@ if (!($connect->checkConnection())) {
                                 beforeSend: function() {
                                     jQuery(\'#tickettable\').html("<div class=\'loadingindicator\'>ЗАГРУЗКА</div>");
                                     if (loadmonth) {
+                                        jQuery(\'#remains\').html(\'\');
                                         jQuery(\'#calendartable\').html("<div class=\'loadingindicator\'>ЗАГРУЗКА</div>");
                                     }
                                 },      
@@ -374,6 +429,9 @@ if (!($connect->checkConnection())) {
                                     if(jdata.month) {
                                         jQuery(\'#calendartable\').html(jdata.month);
                                         jQuery(\'#selected-month\').text(sel_month);
+                                    }
+                                    if(jQuery(\'sup\').length) {
+                                        jQuery(\'#remains\').html("<button id=\'button-remains\' class=\'custom-button\' onclick=\'updateRemains()\'>Перенести остатки</button>");
                                     }
                                 },
                                 error: function() {

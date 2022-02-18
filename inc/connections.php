@@ -93,6 +93,28 @@ class Connections {
                         END
                     ";
                     ibase_query($this->cfg['gedemin_conn'], $sql);
+                    $sql = "
+                        EXECUTE BLOCK AS BEGIN
+                        IF (NOT EXISTS(SELECT 1 FROM RDB\$RELATIONS WHERE RDB\$RELATION_NAME = 'BW_TICKET_REMAINS')) THEN
+                            BEGIN
+                                EXECUTE STATEMENT 'CREATE TABLE BW_TICKET_REMAINS
+                                    (ID                 INTEGER         NOT NULL,
+                                    REM_MONTH           VARCHAR(4)      NOT NULL,
+                                    REM_YEAR            VARCHAR(4)      NOT NULL,
+                                    TABNUM              VARCHAR(10)     NOT NULL,
+                                    IS_USED             SMALLINT        DEFAULT 0,
+                                    PRIMARY KEY (ID));';
+                                EXECUTE STATEMENT 'CREATE SEQUENCE BW_TICKET_REMAINS_ID_SEQUENCE;';
+                                EXECUTE STATEMENT 'CREATE TRIGGER BW_TICKET_REMAINS_A_I FOR BW_TICKET_REMAINS
+                                    ACTIVE BEFORE INSERT POSITION 0
+                                    AS
+                                    BEGIN
+                                        NEW.ID = NEXT VALUE FOR BW_TICKET_REMAINS_ID_SEQUENCE;
+                                    END;';
+                            END
+                        END
+                    ";
+                    ibase_query($this->cfg['gedemin_conn'], $sql);
                     //ibase_free_result($res);
                 }
             }         

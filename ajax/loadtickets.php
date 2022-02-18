@@ -41,7 +41,7 @@ if (isset($_POST['user'])) {
 if (isset($_POST['manager_id']) && isset($_POST['date']) && $connect->checkConnection()) {
     $out['day'] = DBFunctions::loadTickets($connect->getLdapConn(), $connect->getGedeminConn(), $_POST['manager_id'], $_POST['date'], $user);
     if ($_POST['loadmonth'] == true) {
-        $out['month'] = DBFunctions::loadIssuedTickets($connect->getLdapConn(), $connect->getGedeminConn(), $_POST['manager_id'], $_POST['date']);
+        $out['month'] = DBFunctions::loadIssuedTickets($connect->getLdapConn(), $connect->getGedeminConn(), $_POST['manager_id'], $_POST['date'], $user);
     }
     print json_encode($out);
 } else {

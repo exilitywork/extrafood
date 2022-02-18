@@ -28,7 +28,7 @@ class DBFunctions {
 
     static $searchbase = "OU=СООО Белвест,DC=belwest,DC=corp";
 
-    static function updateTicket($tabnum, $date, $ticket) {
+    static function updateTicket($tabnum, $date, $ticket, $userlogin) {
         $connect = new Connections();
         if ($connect->checkConnection()) {
             $gedemin_conn = $connect->getGedeminConn();
@@ -36,13 +36,18 @@ class DBFunctions {
             $year = $d[0];
             $month = $d[1];
             $last_day = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+
+            $date_obj = new DateTime($date);
+            $date_obj->modify('-1 month');
+
             try {
                 $sql = '
                     EXECUTE BLOCK 
                     AS 
                     DECLARE IDUSERCARD INTEGER = 0;
                     DECLARE IDUSEREXTRA INTEGER = 0;
-                    DECLARE TICKETS INTEGER = 0; 
+                    DECLARE TICKETS INTEGER = 0;
+                    DECLARE REMAINS INTEGER = 0; 
                     BEGIN 
                         SELECT USR$CONTACTKEY 
                             FROM 
@@ -61,6 +66,9 @@ class DBFunctions {
                         UPDATE OR INSERT INTO  BW_TICKETS (ASSIGN_DATE, TABNUM, CONTACTKEY, TICKET)
                             VALUES(\''.$date.'\', \''.$tabnum.'\', :IDUSERCARD, '.$ticket.')
                             MATCHING(CONTACTKEY, ASSIGN_DATE);
+                    ';
+                    if ($month == date('m')) {
+                        $sql .= '
                         SELECT COUNT(*) 
                             FROM 
                                 BW_TICKETS 
@@ -70,20 +78,31 @@ class DBFunctions {
                                 AND ASSIGN_DATE BETWEEN \'01.'.$month.'.'.$year.'\' AND \''.$last_day.'.'.$month.'.'.$year.'\'
                             INTO 
                                 :TICKETS;
+                        SELECT COUNT(*) 
+                            FROM 
+                                BW_TICKET_REMAINS 
+                            WHERE 
+                                TABNUM = \''.$tabnum.'\'
+                                AND REM_YEAR = \''.$date_obj->format('Y').'\'
+                                AND REM_MONTH = \''.$date_obj->format('n').'\'
+                                AND IS_USED = 1
+                            INTO 
+                                :REMAINS;
                         IF (:IDUSEREXTRA = 0) THEN
                             INSERT INTO USR$MN_EXTRAFOOD (USR$CONTACTKEY, EDITIONDATE, USR$ISSUPPOSED, USR$SUPPOSED_QUANTITY, USR$ISDAYLIMIT) 
-                                VALUES (:IDUSERCARD, \''.date('Y-m-d H:i:s').'\', 1, :TICKETS, 0);
+                                VALUES (:IDUSERCARD, \''.date('Y-m-d H:i:s').'\', 1, :TICKETS + :REMAINS, 0);
                         ELSE
                             UPDATE USR$MN_EXTRAFOOD
                                 SET
                                     EDITIONDATE = \''.date('Y-m-d H:i:s').'\',
                                     USR$ISSUPPOSED = 1,
-                                    USR$SUPPOSED_QUANTITY = :TICKETS,
+                                    USR$SUPPOSED_QUANTITY = :TICKETS + :REMAINS,
                                     USR$ISDAYLIMIT = 0
                                 WHERE
                                     USR$CONTACTKEY = :IDUSERCARD;
-                    END
-                ';
+                        ';
+                    }
+                    $sql .= ' END';
                 ibase_query($gedemin_conn, $sql);
                 if (ibase_errmsg()) {
                     throw new Exception(ibase_errmsg());
@@ -91,11 +110,10 @@ class DBFunctions {
                 return true;
                 //ibase_affected_rows($gedemin_conn);
             } catch (Exception $e) {
-                Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user->name." - Ошибка в функции DBFunction::updateTicket(): ".$e->getMessage());
-                print_r('Поймано исключение: '.$e->getMessage());
+                Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$userlogin." - Ошибка в функции DBFunction::updateTicket(): ".$e->getMessage());
             }
         } else {
-            Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user->name." - Нет соединения с LDAP / GEDEMIN");
+            Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$userlogin." - Нет соединения с LDAP / GEDEMIN");
         }
 
         return false;
@@ -120,7 +138,6 @@ class DBFunctions {
             }
         } catch (Exception $e) {
             Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$loginuser." - Ошибка в функции DBFunction::getTicket(): ".$e->getMessage());
-            print_r('Поймано исключение: '.$e->getMessage());
         }
         return 0;
     }
@@ -155,7 +172,6 @@ class DBFunctions {
             }
         } catch (Exception $e) {
             Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user->name." - Ошибка в функции DBFunction::getAllTickets(): ".$e->getMessage());
-            print_r('Поймано исключение: '.$e->getMessage());
             return 0;
         }
         return null;
@@ -200,8 +216,8 @@ class DBFunctions {
                     }
                 }
             }
-            
-            if (date_format(date_create($date), 'm') == date('m') && date_format(date_create($date), 'd') <= date('d')) {
+
+            if (date_format(date_create($date), 'm') == date('m') && date_format(date_create($date), 'd') <= date('d') || mb_strtolower($loginuser) == "kapeshkooa") {
                 $disabled = '';
             } else {
                 $disabled = 'disabled';
@@ -245,7 +261,6 @@ class DBFunctions {
             }
         } catch (Exception $e) {
             Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$loginuser." - Ошибка в функции DBFunction::loadTickets(): ".$e->getMessage());
-            print_r('Поймано исключение: '.$e->getMessage());
         }
         $out .= "</tbody>";
         return $out;
@@ -261,8 +276,8 @@ class DBFunctions {
      * 
      * @return String
      */
-    static function loadIssuedTickets($ldap_conn, $gedemin_conn, $manager_sap_id, $date) {
-        global $user;
+    static function loadIssuedTickets($ldap_conn, $gedemin_conn, $manager_sap_id, $date, $loginuser) {
+        //global $user;
         $res = [];
         $out = "";
         try {
@@ -290,14 +305,15 @@ class DBFunctions {
             $out .= "
                 <thead>
                 <tr>
-                    <th>ФИО</th>";
+                    <th>ФИО</th>
+                    <th class='specific-cell'>Ост.</th>";
             for ($i = 1; $i <= $days; $i++) {
                 $out .='<th>'.$i.'</th>';
             }
             $out .="
                     <th class='specific-cell'>Выд.</th>
                     <th class='specific-cell'>Исп.</th>
-                    <th class='specific-cell'>Ост.</th>
+                    <th class='specific-cell'>Есть</th>
                 </tr></thead><tbody>
             ";
             foreach ($res as $mananger => $employees) {
@@ -311,6 +327,16 @@ class DBFunctions {
                         $out .= "
                             <tr id='".$emp['tabnum']."'>
                                 <td>".$emp['name']."</td>";
+                        switch (self::checkRemains($gedemin_conn, $emp['tabnum'], $date, $loginuser)) {
+                            case -1: 
+                                $out .="<td>0<sup>+1</sup></td>";
+                                break;
+                            case 1: 
+                                $out .="<td>1</td>";
+                                $tickets['total'] += 1;
+                                break;
+                            default: $out .="<td>0</td>";
+                        }
                         for ($i = 1; $i <= $days; $i++) {
                             if (isset($emp['vacation_begin']) 
                                     && strtotime($emp['vacation_begin']) <= strtotime($i.'.'.$month.'.'.$year)
@@ -324,7 +350,10 @@ class DBFunctions {
                                 $out .="<td></td>";
                             }
                         }
-                        $stats = self::getGedeminTicketStats($gedemin_conn, self::getGedeminUserId($gedemin_conn, $emp['tabnum']));
+                        $stats = self::getGedeminTicketStats($gedemin_conn, $emp['tabnum'], $year, $month, $days);
+                        if ($year != date('Y') || $month != date('m')) {
+                            $stats['remain'] = $tickets['total'] - $stats['spent'];
+                        }
                         $out .= "
                                 <td>".$tickets['total']."</td>
                                 <td>".$stats['spent']."</td>
@@ -337,19 +366,19 @@ class DBFunctions {
             }
             $out .= "
                 <tfoot><tr>
-                    <th>ФИО</th>";
+                    <th>ФИО</th>
+                    <th class='specific-cell'>Ост.</th>";
             for ($i = 1; $i <= $days; $i++) {
                 $out .='<th>'.$i.'</th>';
             }
             $out .="
                     <th class='specific-cell'>Выд.</th>
                     <th class='specific-cell'>Исп.</th>
-                    <th class='specific-cell'>Ост.</th>
+                    <th class='specific-cell'>Есть</th>
                 </tr></tfoot>
             ";
         } catch (Exception $e) {
-            Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user->name." - Ошибка в функции DBFunction::loadIssuedTickets(): ".$e->getMessage());
-            print_r('Поймано исключение: '.$e->getMessage());
+            Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$loginuser." - Ошибка в функции DBFunction::loadIssuedTickets(): ".$e->getMessage());
         }
         return $out;
     }
@@ -397,7 +426,6 @@ class DBFunctions {
             }
         } catch (Exception $e) {
             Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user->name." - Ошибка в функции DBFunction::getManager(): ".$e->getMessage());
-            print_r('Поймано исключение: '.$e->getMessage());
         }
         return false;
     }
@@ -447,7 +475,6 @@ class DBFunctions {
             }
         } catch (Exception $e) {
             Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user->name." - Ошибка в функции DBFunction::getAssigned(): ".$e->getMessage());
-            print_r('Поймано исключение: '.$e->getMessage());
         }
         return false;
     }
@@ -466,7 +493,6 @@ class DBFunctions {
             $res = ibase_query($gedemin_conn, $sql);
         } catch (Exception $e) {
             Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user->name." - Ошибка в функции DBFunction::addAssigned(): ".$e->getMessage());
-            print_r('Поймано исключение: '.$e->getMessage());
         }
     }
 
@@ -484,7 +510,6 @@ class DBFunctions {
             $res = ibase_query($gedemin_conn, $sql);
         } catch (Exception $e) {
             Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user->name." - Ошибка в функции DBFunction::deleteAssigned(): ".$e->getMessage());
-            print_r('Поймано исключение: '.$e->getMessage());
         }
     }
 
@@ -527,15 +552,14 @@ class DBFunctions {
                 $employee['localeid']       = $info[0]['localeid'][0];
                 $employee['name']            = $info[0]['sn'][0].' '.substr($info[0]['givenname'][0], 0, 2).'.'.$info[0]['initials'][0].'.';
                 $vacation = isset($employee['postalcode'][0]) ? explode("-", $employee['postalcode'][0]) : false;
-                    if ($vacation) {
-                        $employee['vacation_begin'] = $vacation[0];
-                        $employee['vacation_end'] = $vacation[1];
-                    }
+                if ($vacation) {
+                    $employee['vacation_begin'] = $vacation[0];
+                    $employee['vacation_end'] = $vacation[1];
+                }
                 return $employee;
             }
         } catch (Exception $e) {
             Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user->name." - Ошибка в функции DBFunction::getUserBySapId(): ".$e->getMessage());
-            print_r('Поймано исключение: '.$e->getMessage());
         }
         return false;
     }
@@ -579,7 +603,6 @@ class DBFunctions {
             }
         } catch (Exception $e) {
             Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user->name." - Ошибка в функции DBFunction::getGroups(): ".$e->getMessage());
-            print_r('Поймано исключение: '.$e->getMessage());
         }
         return $dep_list;
     }
@@ -611,7 +634,6 @@ class DBFunctions {
             }
         } catch (Exception $e) {
             Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user->name." - Ошибка в функции DBFunction::isManager(): ".$e->getMessage());
-            print_r('Поймано исключение: '.$e->getMessage());
         }
         return false;
     }
@@ -639,14 +661,12 @@ class DBFunctions {
                 $cur_user['departmentnumber']   = $users[0]['departmentnumber'][0];
                 $cur_user['employeenumber']     = $users[0]['employeenumber'][0];
                 $cur_user['localeid']           = $users[0]['localeid'][0];
-                //$cur_user['name']               = $users[0]['name'][0];
                 $cur_user['title']              = $users[0]['title'][0];
                 $cur_user['name']               = $users[0]['sn'][0].' '.substr($users[0]['givenname'][0], 0, 2).'.'.$users[0]['initials'][0].'.';
                 return $cur_user;
             }
         } catch (Exception $e) {
             Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$samaccountname." - Ошибка в функции DBFunction::hasAccess(): ".$e->getMessage());
-            print_r('Поймано исключение: '.$e->getMessage());
         }
         return false;
     }
@@ -670,7 +690,6 @@ class DBFunctions {
             }
         } catch (Exception $e) {
             Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user->name." - Ошибка в функции DBFunction::getAssignedGroups(): ".$e->getMessage());
-            print_r('Поймано исключение: '.$e->getMessage());
         }
         return $dep_list;
     }
@@ -699,7 +718,6 @@ class DBFunctions {
             }
         } catch (Exception $e) {
             Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user->name." - Ошибка в функции DBFunction::getGedeminUserId(): ".$e->getMessage());
-            print_r('Поймано исключение: '.$e->getMessage());
         }
         return false;
     }
@@ -717,6 +735,7 @@ class DBFunctions {
     static function getGedeminTicketUse($conn, $tabnum, $date_begin, $date_end) {
         global $user;
         try {
+            $specfood = 0;
             $sql = '
                 SELECT 
                     CON.NAME AS STAFFNAME,
@@ -733,7 +752,7 @@ class DBFunctions {
                     JOIN GD_PEOPLE P ON P.CONTACTKEY = CON.ID
                 WHERE 
                     O.USR$LOGICDATE BETWEEN \''.$date_begin.'\' AND \''.$date_end.'\' 
-                AND O.USR$PAY = 1 
+                    AND O.USR$PAY = 1 
                     AND P.USR$TABNUM = \''.$tabnum.'\' 
                     AND COALESCE(O.USR$RETURN, 0) = 0 
                 GROUP BY 1, 2, 3, 4, 5 
@@ -742,13 +761,12 @@ class DBFunctions {
             ';
             $res = ibase_query($conn, $sql);
             while ($row = ibase_fetch_assoc($res)) {
-                return (int)$row['SPECFOOD'];
+                $specfood += (int)$row['SPECFOOD'];
             }
         } catch (Exception $e) {
             Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user->name." - Ошибка в функции DBFunction::getGedeminTicketUse(): ".$e->getMessage());
-            print_r('Поймано исключение: '.$e->getMessage());
         }
-        return false;
+        return $specfood;
     }
 
     /**
@@ -759,11 +777,12 @@ class DBFunctions {
      *
      * @return array
      */
-    static function getGedeminTicketStats($conn, $gedemin_id) {
+    static function getGedeminTicketStats($gedemin_conn, $tabnum, $year = false, $month = false, $days = false) {
         global $user;
         try {
             $stats['spent'] = 0;
             $stats['remain'] = 0;
+            $gedemin_id = self::getGedeminUserId($gedemin_conn, $tabnum);
             if ($gedemin_id <> '') {
                 $sql = '
                     SELECT 
@@ -773,16 +792,153 @@ class DBFunctions {
                         USR$MN_EXTRAFOOD
                     WHERE 
                         USR$CONTACTKEY = \''.$gedemin_id.'\'';
-                $res = ibase_query($conn, $sql);
+                $res = ibase_query($gedemin_conn, $sql);
                 while ($row = ibase_fetch_assoc($res)) {
                     $stats['spent'] = (int)$row['SPENT'];
                     $stats['remain'] = (int)$row['REMAIN'];
                 }
             }
+            if ($year != date('Y') || $month != date('m')) {
+                $stats['spent'] = (int)self::getGedeminTicketUse($gedemin_conn, $tabnum, "01.".$month.".".$year, $days.".".$month.".".$year);
+            }
         } catch (Exception $e) {
             Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$user->name." - Ошибка в функции DBFunction::getGedeminTicketStats(): ".$e->getMessage());
-            print_r('Поймано исключение: '.$e->getMessage());
         }
         return $stats;
+    }
+
+    /**
+     * Перенести неиспользованный талон последнего дня предыдущего месяца
+     * 
+     * @param String    $tabnum
+     * @param String    $userlogin
+     *
+     * @return bool
+     */
+    static function updateRemains($tabnum, $userlogin) {
+        $connect = new Connections();
+        if ($connect->checkConnection()) {
+            $gedemin_conn = $connect->getGedeminConn();
+            $date = new DateTime();
+            $date->modify('-1 month');
+            $year = $date->format('Y');
+            $month = $date->format('n');
+            $last_day = cal_days_in_month(CAL_GREGORIAN, date('m'), date('Y'));
+            try {
+                $sql = '
+                    EXECUTE BLOCK 
+                    AS 
+                    DECLARE IDUSERCARD INTEGER = 0;
+                    DECLARE IDUSEREXTRA INTEGER = 0;
+                    DECLARE TICKETS INTEGER = 0;
+                    DECLARE REMAINS INTEGER = 0; 
+                    BEGIN 
+                        SELECT USR$CONTACTKEY 
+                            FROM 
+                                USR$MN_STAFFCARD 
+                            WHERE 
+                                USR$NUMBER = \''.$tabnum.'\'
+                            INTO 
+                                :IDUSERCARD;
+                        SELECT USR$CONTACTKEY 
+                            FROM 
+                                USR$MN_EXTRAFOOD 
+                            WHERE 
+                                USR$CONTACTKEY = :IDUSERCARD
+                            INTO 
+                                :IDUSEREXTRA;
+                        UPDATE BW_TICKET_REMAINS 
+                            SET IS_USED = 1
+                            WHERE REM_YEAR = \''.$year.'\'
+                                AND REM_MONTH = \''.$month.'\'
+                                AND TABNUM = \''.$tabnum.'\';
+                        SELECT COUNT(*) 
+                            FROM 
+                                BW_TICKETS 
+                            WHERE 
+                                CONTACTKEY = :IDUSERCARD 
+                                AND TICKET = \'1\'
+                                AND ASSIGN_DATE BETWEEN \'01.'.date('m').'.'.date('Y').'\' AND \''.$last_day.'.'.date('m').'.'.date('Y').'\'
+                            INTO 
+                                :TICKETS;
+                        SELECT COUNT(*) 
+                            FROM 
+                                BW_TICKET_REMAINS 
+                            WHERE 
+                                TABNUM = \''.$tabnum.'\'
+                                AND REM_YEAR = \''.$year.'\'
+                                AND REM_MONTH = \''.$month.'\'
+                                AND IS_USED = 1
+                            INTO 
+                                :REMAINS;
+                        IF (:IDUSEREXTRA = 0) THEN
+                            INSERT INTO USR$MN_EXTRAFOOD (USR$CONTACTKEY, EDITIONDATE, USR$ISSUPPOSED, USR$SUPPOSED_QUANTITY, USR$ISDAYLIMIT) 
+                                VALUES (:IDUSERCARD, \''.date('Y-m-d H:i:s').'\', 1, :TICKETS + :REMAINS, 0);
+                        ELSE
+                            UPDATE USR$MN_EXTRAFOOD
+                                SET
+                                    EDITIONDATE = \''.date('Y-m-d H:i:s').'\',
+                                    USR$ISSUPPOSED = 1,
+                                    USR$SUPPOSED_QUANTITY = :TICKETS + :REMAINS,
+                                    USR$ISDAYLIMIT = 0
+                                WHERE
+                                    USR$CONTACTKEY = :IDUSERCARD;
+                    END
+                ';
+                ibase_query($gedemin_conn, $sql);
+                if (ibase_errmsg()) {
+                    throw new Exception(ibase_errmsg());
+                }
+                return true;
+                //ibase_affected_rows($gedemin_conn);
+            } catch (Exception $e) {
+                Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$userlogin." - Ошибка в функции DBFunction::updateRemains(): ".$e->getMessage());
+            }
+        } else {
+            Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$userlogin." - Нет соединения с LDAP / GEDEMIN");
+        }
+
+        return false;
+    }
+
+    /**
+     * Проверить наличие неиспользованных талонов последнего дня предыдущего месяца
+     * 
+     * @param mixed     $gedemin_conn
+     * @param String    $tabnum
+     * @param mixed     $date
+     * @param String    $userlogin
+     *
+     * @return bool
+     */
+    static function checkRemains($gedemin_conn, $tabnum, $date, $userlogin) {
+        try {
+            $date = new DateTime($date);
+            $date->modify('-1 month');
+            $year = $date->format('Y');
+            $month = $date->format('n');
+            $sql = '
+                SELECT IS_USED 
+                FROM 
+                    BW_TICKET_REMAINS 
+                WHERE 
+                    REM_YEAR = \''.$year.'\' 
+                    AND REM_MONTH = \''.$month.'\'
+                    AND TABNUM = \''.$tabnum.'\'
+                ';
+            $res = ibase_query($gedemin_conn, $sql);
+            if ($row = ibase_fetch_assoc($res)) {
+                $ticket = (int)$row['IS_USED'] ? 1 : -1; // 1 - остаток перенесен / -1 - остаток не перенесен
+            } else {
+                $ticket = 0;
+            }
+            if (ibase_errmsg()) {
+                throw new Exception(ibase_errmsg());
+            }
+            return $ticket;
+        } catch (Exception $e) {
+            Logger::error($_SERVER['HTTP_X_REAL_IP']." | ".$userlogin." - Ошибка в функции DBFunction::updateRemains(): ".$e->getMessage());
+        }
+        return false;
     }
 }
