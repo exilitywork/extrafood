@@ -128,7 +128,7 @@ DBFunctions::getGedeminTicketUse($connect->getGedeminConn(), '00023283', '01.01.
             print_r("НЕТ ПОДЧИНЕННЫХ ГРУПП ИЛИ ВЫБРАННАЯ ГРУППА НЕ ДОСТУПНА ДЛЯ УПРАВЛЕНИЯ!");
         } else {
             echo '<div id="data">';
-
+            echo "<input type='button' onclick='window.open(\"https://drupal.belwest.com/sites/all/modules/bw-tickets/ticket-instruction.pdf\", \"_blank\")' class='guide-btn custom-button delete-button' value='ИНСТРУКЦИЯ ПО ТАЛОНАМ'/>";
             // ВЫВОД ВЫБРАННОГО ПОДРАЗДЕЛЕНИЯ И ЕГО РУКОВОДИТЕЛЯ
             echo '
                 <form id="assigned" action="" method="get" accept-charset="utf-8">

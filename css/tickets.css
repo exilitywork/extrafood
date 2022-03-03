@@ -241,7 +241,14 @@
 }
 
 .success-text {
-  color: green;
-  text-align: center;
-  font-weight: bolder;
+    color: green;
+    text-align: center;
+    font-weight: bolder;
+}
+
+.guide-btn {
+    position: fixed;
+    bottom: 2%;
+    right: 2%;
+    width: auto;
 }
